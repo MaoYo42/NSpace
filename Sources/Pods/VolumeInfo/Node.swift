@@ -8,23 +8,31 @@ public struct VolumeInfo: Sendable {
     /// 枚举当前挂载卷（浏览可见卷；跳过系统隐藏卷）
     public func volumes() -> [VolumeItem] {
         let keys: [URLResourceKey] = [
-            .volumeNameKey, .volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey,
+            .volumeNameKey, .volumeTotalCapacityKey,
+            .volumeAvailableCapacityKey, .volumeAvailableCapacityForImportantUsageKey,
             .volumeIsEjectableKey, .volumeIsRemovableKey, .volumeIsRootFileSystemKey,
-            .volumeIsBrowsableKey,
+            .volumeIsBrowsableKey, .volumeIsReadOnlyKey,
         ]
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
         return urls.compactMap { url in
             guard let rv = try? url.resourceValues(forKeys: Set(keys)),
                   rv.volumeIsBrowsable ?? true else { return nil }
+            // 容量双通道：importantUsage 是 APFS 上的"重要用途"口径（Finder 同源），但第三方 FS
+            // （macFUSE/ufsd 挂的 NTFS、FAT32）一律返回 0——此时回退 f_bavail，否则会被上层
+            // 误判成"只读"（双 NSpace 那次同类问题的兄弟 bug）
+            let important = rv.volumeAvailableCapacityForImportantUsage ?? 0
+            let plain = Int64(rv.volumeAvailableCapacity ?? 0)
             return VolumeItem(
                 name: rv.volumeName ?? url.lastPathComponent,
                 url: url,
                 totalCapacity: Int64(rv.volumeTotalCapacity ?? 0),
-                availableCapacity: rv.volumeAvailableCapacityForImportantUsage ?? 0,
+                availableCapacity: important > 0 ? important : plain,
                 isEjectable: rv.volumeIsEjectable ?? false,
                 isRemovable: rv.volumeIsRemovable ?? false,
-                isRoot: rv.volumeIsRootFileSystem ?? (url.path == "/"))
+                isRoot: rv.volumeIsRootFileSystem ?? (url.path == "/"),
+                isReadOnly: rv.volumeIsReadOnly ?? false
+            )
         }
     }
 

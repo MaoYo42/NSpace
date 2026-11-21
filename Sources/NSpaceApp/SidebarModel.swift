@@ -150,13 +150,16 @@ final class SidebarModel {
         volumeGroup.children = volumeInfo.volumes().map { vol in
             let icon = NSWorkspace.shared.icon(forFile: vol.url.path)
             icon.size = NSSize(width: 16, height: 16)
-            // 只读卷（DMG 等）可用容量为 0：显示"只读"而非误导性的"0 KB 可用"
+            // 只读判定只认 volumeIsReadOnly（HFS 只读挂载、DMG 等）；容量读不到≠只读——
+            // macFUSE/ufsd 挂的 NTFS、FAT32 卷容量取不到但完全可写，旧逻辑把它们全标成"只读"
             let subtitle: String?
-            if vol.availableCapacity > 0 {
+            if vol.isReadOnly {
+                subtitle = L10n.t("sidebar.readOnly")
+            } else if vol.availableCapacity > 0 {
                 let free = ByteCountFormatter.string(fromByteCount: vol.availableCapacity, countStyle: .file)
                 subtitle = String(format: L10n.t("sidebar.available"), free)
             } else {
-                subtitle = L10n.t("sidebar.readOnly")
+                subtitle = nil
             }
             return SidebarLeafNode(payload: .volume(vol), title: vol.name, icon: icon, url: vol.url,
                                    subtitle: subtitle)

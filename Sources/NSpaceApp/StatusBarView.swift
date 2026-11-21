@@ -108,11 +108,16 @@ final class StatusBarView: NSView {
         }
     }
 
-    /// 右侧可用空间：读当前目录所在卷的重要用途可用容量（只读一次，不轮询）；
-    /// 读不到或为 0（只读卷 DMG 等）则留空，不显示误导性"0 KB 可用"
+    /// 右侧可用空间：读当前目录所在卷的可用容量（只读一次，不轮询）；
+    /// importantUsage 在第三方 FS（macFUSE/ufsd 的 NTFS、FAT32）上恒为 0，回退 f_bavail；
+    /// 两者都读不到才留空，不显示误导性"0 KB 可用"
     func updateVolume(for url: URL) {
-        let capacity = (try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage ?? 0
+        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityForImportantUsageKey,
+                                         .volumeAvailableCapacityKey]
+        let rv = try? url.resourceValues(forKeys: keys)
+        let important = rv?.volumeAvailableCapacityForImportantUsage ?? 0
+        let plain = Int64(rv?.volumeAvailableCapacity ?? 0)
+        let capacity = important > 0 ? important : plain
         spaceLabel.stringValue = capacity > 0
             ? String(format: L10n.t("status.available"), Formatters.size.string(fromByteCount: capacity))
             : ""
