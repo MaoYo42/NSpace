@@ -14,7 +14,7 @@ CONF="${1:-release}"
 APP="build/NSpace.app"
 BIN=".build/$CONF/NSpace"
 
-swift build -c "$CONF"
+swift build -c "$CONF" --disable-sandbox
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -45,9 +45,25 @@ echo "✓ 已构建并签名 $APP (v$VERSION build $BUILD_NUM, sign=${SIGN_IDENT
 # 且注册对 CI 产物无意义——仅本机开发环境执行
 if [ -z "${CI:-}" ]; then
   LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-  { "$LSREG" -dump 2>/dev/null | grep -E "^path:" | grep -i nspace | awk '{print $2}' | sort -u || true; } | while read -r p; do
-    [ -d "$p" ] || "$LSREG" -u "$p" >/dev/null 2>&1 || true
-  done
-  "$LSREG" -f "$APP" >/dev/null 2>&1 || true
-  echo "✓ LaunchServices 已清理死注册并注册 $APP"
+  INSTALLED="/Applications/NSpace.app"
+
+  # dump 的 path 行形如 "path:    /Applications/NSpace.app (0x7458)"：后缀要剥掉，
+  # 且路径可能含空格（本项目目录就叫 "WorkBuddy AI"），所以不能用 awk '{print $2}'
+  { "$LSREG" -dump 2>/dev/null | grep -E "^path:" | grep -i nspace \
+      | sed -E 's/^path:[[:space:]]*//; s/[[:space:]]*\(0x[0-9a-fA-F]+\)[[:space:]]*$//' | sort -u || true; } \
+    | while read -r p; do
+        [ -d "$p" ] || "$LSREG" -u "$p" >/dev/null 2>&1 || true
+      done
+
+  # 双 NSpace 防护：build/ 副本与 /Applications 安装版同 bundle id（com.nspace.NSpace）、同版本，
+  # 两份同时注册会让 Spotlight / 打开方式 / Launchpad 列出两个 NSpace，且点开启动的是哪份随机。
+  # 已安装则只注册安装版；确需注册副本（如未安装时调试）设 REGISTER_BUILD=1。
+  if [ -d "$INSTALLED" ] && [ "${REGISTER_BUILD:-0}" != "1" ]; then
+    "$LSREG" -u "$APP" >/dev/null 2>&1 || true
+    "$LSREG" -f "$INSTALLED" >/dev/null 2>&1 || true
+    echo "✓ 检测到 $INSTALLED —— 跳过 build 副本注册（避免出现两个 NSpace；需注册副本请设 REGISTER_BUILD=1）"
+  else
+    "$LSREG" -f "$APP" >/dev/null 2>&1 || true
+    echo "✓ LaunchServices 已清理死注册并注册 $APP"
+  fi
 fi
