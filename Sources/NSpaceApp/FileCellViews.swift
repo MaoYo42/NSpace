@@ -32,7 +32,11 @@ final class FocusReportingTableView: NSTableView {
 
     override func draggingEnded(_ sender: any NSDraggingInfo) {
         onDragExited?()
-        super.draggingEnded(sender)
+        // 这里**不能**调 super：NSView.h 声明了 draggingEnded: 但全链路都没有实现
+        // （运行时实测 NSView / NSTableView 的 instancesRespond 均为 false，其余 dragging*
+        // 方法则都是 true）。一调就是 unrecognized selector → SIGABRT。
+        // 2026-11-21 23:59 的两次闪退即此：AppKit 在拖拽会话结束时发 draggingEnded:，
+        // 栈顶停在 FocusReportingTableView.draggingEnded → objc_exception_throw。
     }
 
     /// I-43：本次 super.mouseDown 期间是否发起了拖拽（由 delegate 的 pasteboardWriterForRow 置位）——
