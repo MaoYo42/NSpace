@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/MaoYo42/NSpace/releases/latest"><img src="https://img.shields.io/github/v/release/MaoYo42/NSpace?label=release" alt="release"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue" alt="platform">
+  <img src="https://img.shields.io/badge/platform-macOS%2026%2B-blue" alt="platform">
   <img src="https://img.shields.io/badge/UI-纯%20AppKit%20零%20xib-informational" alt="appkit">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
 </p>
@@ -41,7 +41,7 @@ Finder 信息密度太低；QSpace Pro 在新系统上卡顿、闲置 CPU 居高
 
 ## 安装
 
-从 [Releases](https://github.com/SammySnake-d/NSpace/releases/latest) 下载 `NSpace-vX.Y.Z.zip`，解压拖入「应用程序」。
+从 [Releases](https://github.com/MaoYo42/NSpace/releases/latest) 下载 `NSpace-vX.Y.Z.zip`，解压拖入「应用程序」。
 
 > 发行包为 ad-hoc 签名（无 Apple 开发者证书）：首次打开请**右键 → 打开**，或执行
 > `xattr -dr com.apple.quarantine /Applications/NSpace.app`。应用内热更新自动处理隔离标记，后续升级无需重复。

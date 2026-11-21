@@ -156,9 +156,11 @@ enum Preferences {
     // MARK: 热更新（M22；UpdateEngine 胶囊经构造/参数注入这些值，胶囊自身不读 Preferences）
 
     /// 更新 feed 地址（GitHub Releases latest API）；可改（企业/私有分发换源）
+    /// 默认指向**本仓库**：指向上游会让热更新把上游包装回来，覆盖掉本仓库的修复
+    /// （0.20.x 的 NTFS 只读误判、拖拽闪退都只存在于本仓库）
     static var updateFeedURL: String {
         get { d.string(forKey: "updateFeedURL")
-            ?? "https://api.github.com/repos/SammySnake-d/NSpace/releases/latest" }
+            ?? "https://api.github.com/repos/MaoYo42/NSpace/releases/latest" }
         set { d.set(newValue, forKey: "updateFeedURL") }
     }
 

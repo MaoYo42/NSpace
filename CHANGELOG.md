@@ -2,6 +2,23 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。0.y.z 为开发期版本：每完成一个里程碑 bump minor 并打 git tag。
 
+## [0.20.2] - 2026-11-22
+
+### 修复：热更新默认源指向上游，会把上游包装回来
+
+`Preferences.updateFeedURL` 的默认值是上游 `SammySnake-d/NSpace` 的 releases API。
+本仓库版本号高于上游（0.20.x > 0.19.27），而「自动检查更新 + 自动下载」默认都是开着的：
+一旦上游发新版，应用会判定可更新并**就地安装上游包**，本仓库的修复（NTFS/FAT32 只读误判、
+拖拽闪退）会被静默覆盖回去。
+
+默认值改为本仓库 `MaoYo42/NSpace`。已手动自定义过 `updateFeedURL` 的不受影响。
+
+### 文档：系统要求与安装链接
+
+- README 徽章写「macOS 14+」，但 `Package.swift`（`platforms: [.macOS("26.0")]`）与
+  `Info.plist` 的 `LSMinimumSystemVersion` 实际都要求 macOS 26.0——下载后根本打不开。已改为 26+
+- 安装段的 Releases 链接仍指向上游，改为本仓库
+
 ## [0.20.1] - 2026-11-22
 
 ### 修复：拖拽结束必崩（unrecognized selector → SIGABRT）
