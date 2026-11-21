@@ -2,6 +2,36 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。0.y.z 为开发期版本：每完成一个里程碑 bump minor 并打 git tag。
 
+## [0.20.1] - 2026-11-22
+
+### 修复：拖拽结束必崩（unrecognized selector → SIGABRT）
+
+用户报告「NSpace 意外退出」，并怀疑是磁盘问题。系统崩溃报告给出了明确答案：
+
+```
+NSInvalidArgumentException
+-[<dynamic class> draggingEnded:]: unrecognized selector sent to instance 0x10260bef0
+  ...
+  NSpace   @objc FocusReportingTableView.draggingExited(_:)
+  AppKit   __NSCoreDragCompletionProc_block_invoke
+```
+
+`FocusReportingTableView.draggingEnded(_:)` 里调了 `super.draggingEnded(sender)`。
+而 `draggingEnded:` 在 `NSView.h` 里只是**声明**，全链路没有任何实现——运行时逐个探测：
+
+| 方法 | NSView | NSTableView |
+|---|---|---|
+| draggingEntered / Updated / Exited | ✓ | ✓ |
+| **draggingEnded** | **✗** | **✗** |
+
+其余 `dragging*` 都有实现，唯独 `draggingEnded:` 没有。所以只要拖拽会话正常结束
+（AppKit 在 `NSCoreDragCompletionProc` 里给拖放目标发 `draggingEnded:`），super 调用必然
+落到 `doesNotRecognizeSelector` → 抛异常 → `abort()`。这与文件系统、磁盘读写无关。
+
+去掉该 super 调用（`onDragExited?()` 保留，spring-loaded 计时器照常取消）。
+同文件 `draggingExited(_:)` 的 super 调用安全，`BreadcrumbBar` / `TopDeckView` 的同名覆写
+本来就没调 super，一并核对过。
+
 ## [0.20.0] - 2026-11-21
 
 ### 修复：可写的 NTFS / FAT32 卷在侧栏被标成「只读」
