@@ -9,11 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SammySnake-d/NSpace/releases/latest"><img src="https://img.shields.io/github/v/release/SammySnake-d/NSpace?label=release" alt="release"></a>
+  <a href="https://github.com/MaoYo42/NSpace/releases/latest"><img src="https://img.shields.io/github/v/release/MaoYo42/NSpace?label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue" alt="platform">
   <img src="https://img.shields.io/badge/UI-纯%20AppKit%20零%20xib-informational" alt="appkit">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
 </p>
+
+> 本仓库是 [SammySnake-d/NSpace](https://github.com/SammySnake-d/NSpace) 的衍生版本（MIT），
+> 在 v0.19.27 基础上叠加了若干本地修复，详见 [CHANGELOG](CHANGELOG.md)。
+> 上游署名与许可证保持不变。
 
 ![双栏工作区](docs/assets/screenshot.png)
 

@@ -2,6 +2,38 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。0.y.z 为开发期版本：每完成一个里程碑 bump minor 并打 git tag。
 
+## [0.20.0] - 2026-11-21
+
+### 修复：可写的 NTFS / FAT32 卷在侧栏被标成「只读」
+
+用户报告：外挂 NTFS 盘在侧栏「位置」里全显示「只读」，而同一块盘在 QSpace 里读写正常。
+
+**实测确认盘本身是可写的**：这些卷的 `mount` 输出没有 `read-only` 标志，逐卷 `touch`
+探测也全部成功。真正只读的只有 HFS+ 的卷（macOS 26 起不再支持写 HFS+）。
+
+根因是两处叠在一起的判断错误。`VolumeInfo` 取可用容量只用了
+`volumeAvailableCapacityForImportantUsage`，而这个键在第三方文件系统上**恒为 0**
+（macFUSE / ufsd 挂的 NTFS、FAT32 都一样：实测 `important: 0` 而 `f_bavail` 有值）；
+`SidebarModel` 又把「可用容量为 0」直接当成「只读」。两个凑一起，所有非 APFS 的外挂卷
+都被打上了只读标签。状态栏右下角的可用空间是同一个原因留空。
+
+现在只读判定只认 `volumeIsReadOnly`（`VolumeItem` 新增该字段），容量改为双通道
+`important > 0 ? important : f_bavail`；两处都读不到时副标题留空，不再误报。
+
+### 修复：构建产物被注册成「第二个 NSpace」
+
+`build-app.sh` 结尾无条件 `lsregister -f build/NSpace.app`，而安装到 `/Applications` 的是
+同一个 bundle id、同一个版本的另一份拷贝。两份同时注册后，Spotlight、「打开方式」、启动台
+会列出两个 NSpace，点开启动哪一份还是随机的。
+
+现在检测到 `/Applications/NSpace.app` 已存在时只注册安装版、并注销 build 副本
+（`REGISTER_BUILD=1` 可强制注册副本）。
+
+顺带修掉同一段里的另一个静默失效：清理死注册时用 `awk '{print $2}'` 取路径，
+而本机项目目录名带空格（`WorkBuddy AI`），取出来只有 `/Users/maoyo/WorkBuddy`，
+`[ -d ]` 判断永远为假——这段「注册卫生」此前一直在空转。改用 `sed -E` 剥掉
+`path:` 前缀与 `(0x…)` 后缀。
+
 ## [0.19.27] - 2026-09-14
 
 ### 修复：带空格的搜索词找不到文件（不是大小写问题）
