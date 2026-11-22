@@ -567,6 +567,8 @@ final class ColumnUnit: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
     /// 程序化选中防回环（链行高亮/选中恢复不得触发再下钻）
     private var isProgrammaticSelection = false
+    /// ⌘+滚轮缩放的增量累积器（触控板小增量累积到阈值才走一步）
+    private var zoomAccum: CGFloat = 0
     /// 装载完成后要应用的选中集（模式切换迁移/链行高亮）
     var desiredSelection: Set<URL> = []
 
@@ -593,9 +595,21 @@ final class ColumnUnit: NSView, NSTableViewDataSource, NSTableViewDelegate {
             guard let self else { return }
             self.owner?.moveFocus(from: self, direction: 1)
         }
+        // ⌘+滚轮缩放：与列表视图共用同一份字号偏好与广播（各列行高/字体一起变）
+        tableView.onZoom = { [weak self] delta, precise in
+            guard let self else { return }
+            let steps = DisplayZoom.steps(delta: delta, precise: precise,
+                                          accumulated: &self.zoomAccum)
+            guard steps != 0 else { return }
+            _ = DisplayZoom.stepListFont(by: steps)
+        }
+        // 字号变更（⌘滚轮或外观设置页）→ 本列同步行高并重取字体
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(fontChanged(_:)),
+            name: .nspaceColumnsChanged, object: nil)
         tableView.style = .plain
         tableView.headerView = nil
-        tableView.rowHeight = 22
+        tableView.rowHeight = FileListViewController.rowHeight(for: Formatters.listFontSize)
         tableView.usesAutomaticRowHeights = false
         tableView.allowsMultipleSelection = true
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
@@ -741,6 +755,14 @@ final class ColumnUnit: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
     @objc private func didDoubleClick(_ sender: Any?) {
         owner?.doubleClicked(in: self)
+    }
+
+    /// 字号变更（⌘+滚轮或外观设置页）：行高跟着字号走，并让单元格重取字体
+    @objc private func fontChanged(_ note: Notification) {
+        let height = FileListViewController.rowHeight(for: Formatters.listFontSize)
+        guard tableView.rowHeight != height else { return }
+        tableView.rowHeight = height
+        tableView.reloadData()
     }
 
     // MARK: 拖拽源 / 投放目标（语义裁决在 owner，与列表一致）

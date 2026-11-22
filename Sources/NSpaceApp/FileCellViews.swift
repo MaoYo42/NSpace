@@ -17,6 +17,8 @@ final class FocusReportingTableView: NSTableView {
     var onSpace: (() -> Void)?
     /// 拖拽移出/结束（spring-loaded 计时器取消用）
     var onDragExited: (() -> Void)?
+    /// ⌘+滚轮：缩放显示大小（入参 = 滚轮增量、是否精确增量）
+    var onZoom: ((CGFloat, Bool) -> Void)?
     /// ←/→ 键（分栏视图列间移动用；nil 时交回系统默认行为）
     var onArrowLeft: (() -> Void)?
     var onArrowRight: (() -> Void)?
@@ -37,6 +39,16 @@ final class FocusReportingTableView: NSTableView {
         // 方法则都是 true）。一调就是 unrecognized selector → SIGABRT。
         // 2026-11-21 23:59 的两次闪退即此：AppKit 在拖拽会话结束时发 draggingEnded:，
         // 栈顶停在 FocusReportingTableView.draggingEnded → objc_exception_throw。
+    }
+
+    /// ⌘+滚轮 = 缩放显示大小（QSpace/Finder 肌肉记忆）。
+    /// 必须吞掉事件：交给 super 的话内容会同时滚动，缩放与滚动打架。
+    override func scrollWheel(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            onZoom?(event.scrollingDeltaY, event.hasPreciseScrollingDeltas)
+            return
+        }
+        super.scrollWheel(with: event)
     }
 
     /// I-43：本次 super.mouseDown 期间是否发起了拖拽（由 delegate 的 pasteboardWriterForRow 置位）——

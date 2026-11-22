@@ -163,7 +163,7 @@ final class AppearanceSettingsPage: NSObject, SettingsPage {
         let label = NSTextField(labelWithString: L10n.t("settings.appearance.fontSize"))
         label.font = .systemFont(ofSize: 12)
         let popup = NSPopUpButton()
-        for size in 11...14 {
+        for size in Preferences.listFontRange {
             popup.addItem(withTitle: "\(size)")
             popup.lastItem?.tag = size
         }

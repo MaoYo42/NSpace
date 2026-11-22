@@ -191,6 +191,18 @@ enum UISelfTest {
             record(i43a && !i43cmd && !i43dbl && !i43out && !i43single,
                    "I-43 点选区内收敛谓词：纯单击多选已选行=抢先收敛，修饰键/双击/选区外/单选=不介入（\(i43a)/\(i43cmd)/\(i43dbl)/\(i43out)/\(i43single)）")
 
+            // ── 场景 M29：⌘+滚轮缩放步进（纯逻辑确定性；方向/累积/边界）──────────────
+            var zoomAcc: CGFloat = 0
+            let wheelUp = DisplayZoom.steps(delta: 1, precise: false, accumulated: &zoomAcc)
+            let wheelDown = DisplayZoom.steps(delta: -1, precise: false, accumulated: &zoomAcc)
+            zoomAcc = 0
+            let t1 = DisplayZoom.steps(delta: 1.5, precise: true, accumulated: &zoomAcc)
+            let t2 = DisplayZoom.steps(delta: 1.5, precise: true, accumulated: &zoomAcc)
+            let t3 = DisplayZoom.steps(delta: 1.5, precise: true, accumulated: &zoomAcc)  // 累计 4.5 ≥ 4 → 一步
+            let t4 = DisplayZoom.steps(delta: -9, precise: true, accumulated: &zoomAcc)   // 反向一次走两步
+            record(wheelUp == 1 && wheelDown == -1 && t1 == 0 && t2 == 0 && t3 == 1 && t4 == -2,
+                   "M29 ⌘+滚轮缩放：滚轮一格一步、触控板累积够阈值才走步、反向多步（\(wheelUp)/\(wheelDown)/\(t1)\(t2)\(t3)/\(t4)）")
+
             // ── 场景 M28：搜索智能排序（frecency+匹配融合）接管排序 vs 开关关回退到达序 ──────────
             runSmartSortScenario()
 

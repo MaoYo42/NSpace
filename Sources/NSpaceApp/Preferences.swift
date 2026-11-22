@@ -199,13 +199,19 @@ enum Preferences {
         }
     }
 
-    /// 列表字号（11/12/13/14，默认 12）——越界回夹到候选区间
+    /// 列表字号区间——外观设置页的下拉项与 ⌘+滚轮缩放共用同一区间
+    static let listFontRange = 10...20
+
+    /// 列表字号（10…20，默认 12）——越界回夹到候选区间
     static var listFontSize: Int {
         get {
             let v = d.object(forKey: "listFontSize") as? Int ?? 12
-            return min(14, max(11, v))
+            return min(listFontRange.upperBound, max(listFontRange.lowerBound, v))
         }
-        set { d.set(min(14, max(11, newValue)), forKey: "listFontSize") }
+        set {
+            d.set(min(listFontRange.upperBound, max(listFontRange.lowerBound, newValue)),
+                  forKey: "listFontSize")
+        }
     }
 
     /// 高亮活动窗格地址栏（默认开）

@@ -13,6 +13,8 @@ final class IconGridCollectionView: NSCollectionView {
     var menuProvider: ((IndexPath?) -> NSMenu?)?
     var onSpace: (() -> Void)?
     var onDoubleClick: ((IndexPath) -> Void)?
+    /// ⌘+滚轮：缩放图标尺寸（入参 = 滚轮增量、是否精确增量）
+    var onZoom: ((CGFloat, Bool) -> Void)?
 
     override func mouseDown(with event: NSEvent) {
         onInteract?()
@@ -27,6 +29,15 @@ final class IconGridCollectionView: NSCollectionView {
     override func rightMouseDown(with event: NSEvent) {
         onInteract?()
         super.rightMouseDown(with: event)
+    }
+
+    /// ⌘+滚轮 = 缩放图标尺寸（QSpace 同款）。吞掉事件，否则网格会同时滚动。
+    override func scrollWheel(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            onZoom?(event.scrollingDeltaY, event.hasPreciseScrollingDeltas)
+            return
+        }
+        super.scrollWheel(with: event)
     }
 
     override func becomeFirstResponder() -> Bool {
@@ -229,6 +240,9 @@ final class FileIconGridViewController: NSViewController, FileRevealTarget {
         collectionView.onInteract = { [weak self] in self?.onInteract?() }
         collectionView.menuProvider = { [weak self] _ in self?.buildMenu() }
         collectionView.onSpace = { [weak self] in self?.toggleQuickLook(nil) }
+        collectionView.onZoom = { [weak self] delta, precise in
+            self?.zoomIconSize(delta: delta, precise: precise)
+        }
         collectionView.onDoubleClick = { [weak self] ip in
             guard let self, let file = self.fileItem(at: ip) else { return }
             self.open(file)
@@ -326,6 +340,23 @@ final class FileIconGridViewController: NSViewController, FileRevealTarget {
         guard size != iconSize else { return }
         iconSize = size
         Self.preferredIconSize = size
+        applyIconSize()
+    }
+
+    // MARK: ⌘+滚轮缩放（QSpace 同款）
+
+    private var zoomAccum: CGFloat = 0
+
+    /// 一步 4pt：48…128 共 20 档，滚一格能看出变化又不至于跳太狠。
+    /// 与底部滑块共用 `preferredIconSize`，两个入口永远同一状态。
+    private func zoomIconSize(delta: CGFloat, precise: Bool) {
+        let steps = DisplayZoom.steps(delta: delta, precise: precise, accumulated: &zoomAccum)
+        guard steps != 0 else { return }
+        let target = min(128, max(48, iconSize + CGFloat(steps) * 4))
+        guard target != iconSize else { return }
+        iconSize = target
+        Self.preferredIconSize = target
+        sizeSlider.doubleValue = Double(target)
         applyIconSize()
     }
 

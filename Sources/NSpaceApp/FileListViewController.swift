@@ -98,6 +98,9 @@ final class FileListViewController: NSViewController, FileRevealTarget {
         tableView.onBackspaceAction = { [weak self] in self?.handleBackspace() }
         tableView.onSpace = { [weak self] in self?.toggleQuickLook(nil) }
         tableView.onDragExited = { [weak self] in self?.cancelSpringLoad() }
+        tableView.onZoom = { [weak self] delta, precise in
+            self?.zoomListFont(delta: delta, precise: precise)
+        }
         tableView.isGroupRowProvider = { [weak self] row in self?.isGroupRow(row) ?? false }
         tableView.style = .plain  // 紧凑密度：去 inset 大留白（QSpace 式）
         tableView.intercellSpacing = NSSize(width: 8, height: 0)
@@ -214,15 +217,32 @@ final class FileListViewController: NSViewController, FileRevealTarget {
         tableView.reloadData()
     }
 
-    /// 行高随字号（大字号给更高行高避免裁切）：>=13 用 24，否则 22
-    private static func rowHeight(for fontSize: CGFloat) -> CGFloat {
-        fontSize >= 13 ? 24 : 22
+    /// 行高随字号（大字号给更高行高避免裁切）：<13 → 22，<15 → 24，<17 → 28，其余 32。
+    /// 分栏视图复用同一张表（ColumnUnit 直接调），两条视图模式的密度才一致。
+    static func rowHeight(for fontSize: CGFloat) -> CGFloat {
+        switch fontSize {
+        case ..<13: return 22
+        case ..<15: return 24
+        case ..<17: return 28
+        default: return 32
+        }
     }
 
     /// 列显隐/字号变更广播处理：重建列（含 reloadData 令单元格重取字号）+ 同步行高
     @objc private func columnsOrFontChanged(_ note: Notification) {
         tableView.rowHeight = Self.rowHeight(for: Formatters.listFontSize)
         rebuildOptionalColumns()
+    }
+
+    // MARK: ⌘+滚轮缩放（QSpace 同款：字号与行高一起变）
+
+    private var zoomAccum: CGFloat = 0
+
+    private func zoomListFont(delta: CGFloat, precise: Bool) {
+        let steps = DisplayZoom.steps(delta: delta, precise: precise, accumulated: &zoomAccum)
+        guard steps != 0 else { return }
+        // 广播路径与外观设置页一致：所有列表窗格一起重建列、重取字号与行高
+        _ = DisplayZoom.stepListFont(by: steps)
     }
 
     @objc private func toggleColumn(_ sender: NSMenuItem) {
@@ -892,7 +912,9 @@ extension FileListViewController: NSTableViewDataSource, NSTableViewDelegate {
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        isGroupRow(row) ? 24 : Self.rowHeight(for: Formatters.listFontSize)
+        // 组头不随字号缩（它自己带上下留白），但要保证大字号下不被压扁
+        isGroupRow(row) ? max(24, Self.rowHeight(for: Formatters.listFontSize))
+                        : Self.rowHeight(for: Formatters.listFontSize)
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
