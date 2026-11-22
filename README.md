@@ -51,11 +51,13 @@ Finder 信息密度太低；QSpace Pro 在新系统上卡顿、闲置 CPU 居高
 只需 Xcode Command Line Tools（无需完整 Xcode）：
 
 ```bash
-git clone https://github.com/SammySnake-d/NSpace.git && cd NSpace
-./scripts/build-app.sh     # 构建并签名 build/NSpace.app
-./scripts/test.sh          # 15 个测试套件
-./scripts/ui-smoke.sh      # 81 项 UI 真效果断言（免录屏权限自渲染截图）
+git clone https://github.com/MaoYo42/NSpace.git && cd NSpace
+./scripts/build-app.sh                 # 构建并签名 build/NSpace.app
+./scripts/test.sh --disable-sandbox    # 18 个套件 / 147 项单元测试
+./scripts/ui-smoke.sh                  # UI 冒烟：逐条断言 + 33 张自渲染截图
 ```
+
+构建管线、签名与 TCC、LaunchServices 卫生、发版流程和已知坑见 [docs/development.md](docs/development.md)。
 
 ## 架构
 
